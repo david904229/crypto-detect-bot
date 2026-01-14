@@ -7,9 +7,7 @@ import os
 
 # ================= 參數設定區 =================
 
-# 1. Telegram 設定
-TELEGRAM_TOKEN = "7664947413:AAEdgVMIEOB1xWN-XriNGurYQ0XPmHC7P2g"
-TELEGRAM_CHAT_ID = "1085637190"
+MAX_RUNTIME = 5.5 * 60 * 60
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -298,8 +296,12 @@ def main():
     start_msg += f"進場: {TIMEFRAME_ENTRY} EMA12"
     print(start_msg)
     send_telegram_msg(start_msg)
+    start_time = time.time()
 
     while True:
+        if time.time() - start_time > MAX_RUNTIME:
+            print("⏰ 達到最大執行時間，準備結束（讓 GitHub Actions 接力）")
+            break
         try:
             # 紀錄開始時間
             loop_start = time.time()
