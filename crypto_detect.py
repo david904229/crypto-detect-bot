@@ -273,14 +273,8 @@ def analyze_symbol(exchange, symbol):
             send_telegram_msg(msg)
 
 def main():
-    exchange = ccxt.binance({
-        'enableRateLimit': True,
-        'timeout': 30000,
-        'options': {
-            'defaultType': 'spot',
-            'adjustForTimeDifference': True,
-        }
-    })
+    exchange = ccxt.kucoin()
+    exchange.load_markets()
     
     init_target_symbols = get_top_usdt_pairs(exchange, limit=TOP_COIN_LIMIT)
     start_msg = f"🚀 <b>Crypto Monitor (Vegas + Fib)</b>\n"
