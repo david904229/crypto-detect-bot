@@ -84,13 +84,12 @@ def get_top_usdt_pairs(exchange, limit=TOP_COIN_LIMIT):
 
     try:
         exchange.load_markets()
-
         symbols = [
-            s for s in exchange.symbols
+            s for s, m in exchange.markets.items()
             if s.endswith('/USDT')
+            and m.get('spot') is True
             and 'UP/' not in s
             and 'DOWN/' not in s
-            and ':' not in s          # 排除期貨
         ]
 
         symbols = symbols[:limit]
@@ -99,9 +98,8 @@ def get_top_usdt_pairs(exchange, limit=TOP_COIN_LIMIT):
         return symbols
 
     except Exception as e:
-        print(f"[嚴重錯誤] load_markets 失敗: {e}")
+        print(f"[嚴重錯誤] load_markets 失敗: {repr(e)}")
 
-        # 極端保底（但給多一點）
         return [
             'BTC/USDT','ETH/USDT','BNB/USDT','SOL/USDT','XRP/USDT',
             'ADA/USDT','DOGE/USDT','AVAX/USDT','LINK/USDT','MATIC/USDT'
@@ -275,7 +273,12 @@ def analyze_symbol(exchange, symbol):
             send_telegram_msg(msg)
 
 def main():
-    exchange = ccxt.binance()
+    exchange = ccxt.binance({
+    'enableRateLimit': True,
+    'options': {
+        'defaultType': 'spot',   # 👈 關鍵
+    }
+})
     
     init_target_symbols = get_top_usdt_pairs(exchange, limit=TOP_COIN_LIMIT)
     start_msg = f"🚀 <b>Crypto Monitor (Vegas + Fib)</b>\n"
