@@ -33,7 +33,7 @@ FIB_LEVELS = [0.382, 0.5, 0.618, 0.786, 1.0, 1.13, 1.272, 1.414]
 # 5. 進場與其他參數
 ENTRY_EMA = 12
 CHOCH_LOOKBACK = 50 
-MIN_VOLUME_MILLION = 1  
+MIN_VOLUME_MILLION = 0.5  
 
 # ========= 通知冷卻設定 =========
 global alert_history
@@ -56,28 +56,56 @@ def send_telegram_msg(msg):
     except Exception as e:
         print(f"Telegram 發送失敗: {e}")
 
+# def get_top_usdt_pairs(exchange, limit=TOP_COIN_LIMIT):
+#     print(f"正在獲取市場數據 (前 {limit} 名)...")
+#     try:
+#         tickers = exchange.fetch_tickers()
+#         valid_tickers = [
+#             t for t in tickers.values() 
+#             if t['symbol'].endswith('/USDT') 
+#             and 'UP/' not in t['symbol'] 
+#             and 'DOWN/' not in t['symbol']
+#         ]
+#         sorted_tickers = sorted(valid_tickers, key=lambda x: x['quoteVolume'], reverse=True)
+        
+#         final_symbols = []
+#         for t in sorted_tickers[:limit]:
+#             vol_in_million = t['quoteVolume'] / 1000000 
+#             if vol_in_million >= MIN_VOLUME_MILLION:
+#                 final_symbols.append(t['symbol'])
+        
+#         print(f"篩選後剩餘: {len(final_symbols)} 個幣種 (成交額 > {MIN_VOLUME_MILLION}M)")
+#         return final_symbols
+#     except:
+#         return ['BTC/USDT', 'ETH/USDT']
+
 def get_top_usdt_pairs(exchange, limit=TOP_COIN_LIMIT):
-    print(f"正在獲取市場數據 (前 {limit} 名)...")
+    print(f"取得 USDT 交易對（最多 {limit} 個）...")
+
     try:
-        tickers = exchange.fetch_tickers()
-        valid_tickers = [
-            t for t in tickers.values() 
-            if t['symbol'].endswith('/USDT') 
-            and 'UP/' not in t['symbol'] 
-            and 'DOWN/' not in t['symbol']
+        exchange.load_markets()
+
+        symbols = [
+            s for s in exchange.symbols
+            if s.endswith('/USDT')
+            and 'UP/' not in s
+            and 'DOWN/' not in s
+            and ':' not in s          # 排除期貨
         ]
-        sorted_tickers = sorted(valid_tickers, key=lambda x: x['quoteVolume'], reverse=True)
-        
-        final_symbols = []
-        for t in sorted_tickers[:limit]:
-            vol_in_million = t['quoteVolume'] / 1000000 
-            if vol_in_million >= MIN_VOLUME_MILLION:
-                final_symbols.append(t['symbol'])
-        
-        print(f"篩選後剩餘: {len(final_symbols)} 個幣種 (成交額 > {MIN_VOLUME_MILLION}M)")
-        return final_symbols
-    except:
-        return ['BTC/USDT', 'ETH/USDT']
+
+        symbols = symbols[:limit]
+
+        print(f"實際掃描幣種數: {len(symbols)}")
+        return symbols
+
+    except Exception as e:
+        print(f"[嚴重錯誤] load_markets 失敗: {e}")
+
+        # 極端保底（但給多一點）
+        return [
+            'BTC/USDT','ETH/USDT','BNB/USDT','SOL/USDT','XRP/USDT',
+            'ADA/USDT','DOGE/USDT','AVAX/USDT','LINK/USDT','MATIC/USDT'
+        ]
 
 def get_market_data(exchange, symbol, timeframe, limit=300):
     try:
@@ -272,7 +300,7 @@ def main():
             for i, symbol in enumerate(target_symbols):
                 print(f"[{i+1}/{total}] 掃描: {symbol} ...", end='\r')
                 analyze_symbol(exchange, symbol)
-                time.sleep(0.1) 
+                time.sleep(0.2) 
             
             duration = time.time() - loop_start
             print(f"\n--- 本輪耗時 {int(duration)} 秒 ---")
